@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stylish Book Form</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .form-container {
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background-color: #f8f9fa;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .error {
+      color: red;
+      font-size: 0.875em;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="form-container">
+      <h2 class="text-center mb-4">Add a Book</h2>
+      <form id="bookForm" novalidate>
+        <!-- Book Title -->
+        <div class="mb-3">
+          <label for="bookTitle" class="form-label">Book Title</label>
+          <input type="text" class="form-control" id="bookTitle" placeholder="Enter book title" required>
+          <div class="error" id="titleError"></div>
+        </div>
+        <!-- Book Author -->
+        <div class="mb-3">
+          <label for="bookAuthor" class="form-label">Book Author</label>
+          <input type="text" class="form-control" id="bookAuthor" placeholder="Enter author name" required>
+          <div class="error" id="authorError"></div>
+        </div>
+        <!-- Book Type -->
+        <div class="mb-3">
+          <label for="bookType" class="form-label">Book Type</label>
+          <select class="form-select" id="bookType" required>
+            <option value="">Select type</option>
+            <option value="Ebook">EBook</option>
+            <option value="Physical">Physical Book</option>
+          </select>
+          <div class="error" id="typeError"></div>
+        </div>
+        <!-- File Size (EBook) -->
+        <div class="mb-3 d-none" id="fileSizeGroup">
+          <label for="fileSize" class="form-label">File Size (MB)</label>
+          <input type="number" class="form-control" id="fileSize" placeholder="Enter file size in MB">
+          <div class="error" id="fileSizeError"></div>
+        </div>
+        <!-- Pages (Physical Book) -->
+        <div class="mb-3 d-none" id="pagesGroup">
+          <label for="pages" class="form-label">Number of Pages</label>
+          <input type="number" class="form-control" id="pages" placeholder="Enter number of pages">
+          <div class="error" id="pagesError"></div>
+        </div>
+        <!-- Submit Button -->
+        <div class="d-grid">
+          <button type="submit" class="btn btn-primary">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS and Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const form = document.getElementById("bookForm");
+    const bookTitle = document.getElementById("bookTitle");
+    const bookAuthor = document.getElementById("bookAuthor");
+    const bookType = document.getElementById("bookType");
+    const fileSize = document.getElementById("fileSize");
+    const pages = document.getElementById("pages");
+    const fileSizeGroup = document.getElementById("fileSizeGroup");
+    const pagesGroup = document.getElementById("pagesGroup");
+
+    // Helper function to show errors
+    function showError(field, errorId, message) {
+      document.getElementById(errorId).innerText = message;
+      field.classList.add("is-invalid");
+    }
+
+    // Helper function to clear errors
+    function clearError(field, errorId) {
+      document.getElementById(errorId).innerText = "";
+      field.classList.remove("is-invalid");
+    }
+
+    // Toggle fields based on book type
+    bookType.addEventListener("change", () => {
+      clearError(bookType, "typeError");
+      fileSizeGroup.classList.add("d-none");
+      pagesGroup.classList.add("d-none");
+      fileSize.value = "";
+      pages.value = "";
+
+      if (bookType.value === "Ebook") {
+        fileSizeGroup.classList.remove("d-none");
+      } else if (bookType.value === "Physical") {
+        pagesGroup.classList.remove("d-none");
+      }
+    });
+
+    // Form submission handler
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      let isValid = true;
+
+      // Validate book title
+      if (bookTitle.value.trim() === "") {
+        showError(bookTitle, "titleError", "Book title is required");
+        isValid = false;
+      } else {
+        clearError(bookTitle, "titleError");
+      }
+
+      // Validate book author
+      if (bookAuthor.value.trim() === "") {
+        showError(bookAuthor, "authorError", "Book author is required");
+        isValid = false;
+      } else {
+        clearError(bookAuthor, "authorError");
+      }
+
+      // Validate book type
+      if (bookType.value === "") {
+        showError(bookType, "typeError", "Book type is required");
+        isValid = false;
+      } else {
+        clearError(bookType, "typeError");
+      }
+
+      // Validate file size for eBooks
+      if (bookType.value === "Ebook" && (fileSize.value.trim() === "" | parseInt(fileSize.value.trim())<1)) {
+        showError(fileSize, "fileSizeError", "File size is required for eBooks");
+        isValid = false;
+      } else {
+        clearError(fileSize, "fileSizeError");
+      }
+
+      // Validate pages for physical books
+      if (bookType.value === "Physical" && (pages.value.trim() === "" | parseInt(pages.value.trim())<1)) {
+        showError(pages, "pagesError", "Number of pages is required for physical books");
+        isValid = false;
+      } else {
+        clearError(pages, "pagesError");
+      }
+
+      // If all validations pass, send POST request
+      if (isValid) {
+        const formData = {
+          title: bookTitle.value.trim(),
+          author: bookAuthor.value.trim(),
+          type: bookType.value,
+          ...(bookType.value === "Ebook" && { fileSizeMB: fileSize.value.trim() }),
+          ...(bookType.value === "Physical" && { pages: pages.value.trim() }),
+        };
+
+        try {
+          const response = await fetch("/addBook", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(formData),
+          });
+
+          if (response.ok) {
+            alert("Book added successfully!");
+            window.location.href="/"
+            form.reset();
+            
+            fileSizeGroup.classList.add("d-none");
+            pagesGroup.classList.add("d-none");
+          } else {
+            alert("Failed to add book. Please try again.");
+          }
+        } catch (error) {
+          console.error("Error submitting form:", error);
+          alert("An error occurred. Please try again.");
+        }
+      }
+    });
+  </script>
+</body>
+</html>
